@@ -1,4 +1,5 @@
-import React from 'react'
+import PropTypes from "prop-types";
+import React from "react";
 import {
   Linking,
   StyleSheet,
@@ -7,14 +8,17 @@ import {
   StyleProp,
   ViewStyle,
   TextStyle,
-} from 'react-native'
+  Text,
+} from "react-native";
 
-import ParsedText from 'react-native-parsed-text'
-import { LeftRightStyle, IMessage } from './types'
-import { useChatContext } from './GiftedChatContext'
-import { error } from './logging'
+import ParsedText from "react-native-parsed-text";
+import { MathJaxSvg } from "react-native-mathjax-html-to-svg";
+import { LeftRightStyle, IMessage } from "./Models";
+import { StylePropType } from "./utils";
+import { useChatContext } from "./GiftedChatContext";
+import { error } from "./logging";
 
-const WWW_URL_PATTERN = /^www\./i
+const WWW_URL_PATTERN = /^www\./i;
 
 const { textStyle } = StyleSheet.create({
   textStyle: {
@@ -25,51 +29,76 @@ const { textStyle } = StyleSheet.create({
     marginLeft: 10,
     marginRight: 10,
   },
-})
+});
 
 const styles = {
   left: StyleSheet.create({
     container: {},
     text: {
-      color: 'black',
+      color: "black",
       ...textStyle,
     },
     link: {
-      color: 'black',
-      textDecorationLine: 'underline',
+      color: "black",
+      textDecorationLine: "underline",
     },
   }),
   right: StyleSheet.create({
     container: {},
     text: {
-      color: 'white',
+      color: "white",
       ...textStyle,
     },
     link: {
-      color: 'white',
-      textDecorationLine: 'underline',
+      color: "white",
+      textDecorationLine: "underline",
     },
   }),
-}
+};
+const questionParser = (text: string) => {
+  const regex = /(\$\$.*?\$\$)/g;
+  const splitParts = text.split(regex);
 
-const DEFAULT_OPTION_TITLES = ['Call', 'Text', 'Cancel']
+  return (
+    <Text>
+      {splitParts.map((part, index) => {
+        if (part.startsWith("$$") && part.endsWith("$$")) {
+          const mathContent = part.replace(/\$\$/g, "");
+          return (
+            <View key={`math-${index}`}>
+              <Text />
+              <MathJaxSvg
+                key={index}
+                fontSize={20}
+              >{`$$${mathContent}$$`}</MathJaxSvg>
+              <Text />
+            </View>
+          );
+        }
+        return <Text key={index}>{part}</Text>;
+      })}
+    </Text>
+  );
+};
+
+const DEFAULT_OPTION_TITLES = ["Call", "Text", "Cancel"];
 
 export interface MessageTextProps<TMessage extends IMessage> {
-  position?: 'left' | 'right'
-  optionTitles?: string[]
-  currentMessage: TMessage
-  containerStyle?: LeftRightStyle<ViewStyle>
-  textStyle?: LeftRightStyle<TextStyle>
-  linkStyle?: LeftRightStyle<TextStyle>
-  textProps?: TextProps
-  customTextStyle?: StyleProp<TextStyle>
-  parsePatterns?: (linkStyle: TextStyle) => []
+  position?: "left" | "right";
+  optionTitles?: string[];
+  currentMessage: TMessage;
+  containerStyle?: LeftRightStyle<ViewStyle>;
+  textStyle?: LeftRightStyle<TextStyle>;
+  linkStyle?: LeftRightStyle<TextStyle>;
+  textProps?: TextProps;
+  customTextStyle?: StyleProp<TextStyle>;
+  parsePatterns?: (linkStyle: TextStyle) => [];
 }
 
-export function MessageText<TMessage extends IMessage = IMessage> ({
+export function MessageText<TMessage extends IMessage = IMessage>({
   currentMessage = {} as TMessage,
   optionTitles = DEFAULT_OPTION_TITLES,
-  position = 'left',
+  position = "left",
   containerStyle,
   textStyle,
   linkStyle: linkStyleProp,
@@ -77,7 +106,7 @@ export function MessageText<TMessage extends IMessage = IMessage> ({
   parsePatterns,
   textProps,
 }: MessageTextProps<TMessage>) {
-  const { actionSheet } = useChatContext()
+  const { actionSheet } = useChatContext();
 
   // TODO: React.memo
   // const shouldComponentUpdate = (nextProps: MessageTextProps<TMessage>) => {
@@ -91,20 +120,19 @@ export function MessageText<TMessage extends IMessage = IMessage> ({
   const onUrlPress = (url: string) => {
     // When someone sends a message that includes a website address beginning with "www." (omitting the scheme),
     // react-native-parsed-text recognizes it as a valid url, but Linking fails to open due to the missing scheme.
-    if (WWW_URL_PATTERN.test(url))
-      onUrlPress(`https://${url}`)
+    if (WWW_URL_PATTERN.test(url)) onUrlPress(`https://${url}`);
     else
-      Linking.openURL(url).catch(e => {
-        error(e, 'No handler for URL:', url)
-      })
-  }
+      Linking.openURL(url).catch((e) => {
+        error(e, "No handler for URL:", url);
+      });
+  };
 
   const onPhonePress = (phone: string) => {
     const options =
       optionTitles && optionTitles.length > 0
         ? optionTitles.slice(0, 3)
-        : DEFAULT_OPTION_TITLES
-    const cancelButtonIndex = options.length - 1
+        : DEFAULT_OPTION_TITLES;
+    const cancelButtonIndex = options.length - 1;
     actionSheet().showActionSheetWithOptions(
       {
         options,
@@ -113,29 +141,26 @@ export function MessageText<TMessage extends IMessage = IMessage> ({
       (buttonIndex?: number) => {
         switch (buttonIndex) {
           case 0:
-            Linking.openURL(`tel:${phone}`).catch(e => {
-              error(e, 'No handler for telephone')
-            })
-            break
+            Linking.openURL(`tel:${phone}`).catch((e) => {
+              error(e, "No handler for telephone");
+            });
+            break;
           case 1:
-            Linking.openURL(`sms:${phone}`).catch(e => {
-              error(e, 'No handler for text')
-            })
-            break
+            Linking.openURL(`sms:${phone}`).catch((e) => {
+              error(e, "No handler for text");
+            });
+            break;
         }
       }
-    )
-  }
+    );
+  };
 
   const onEmailPress = (email: string) =>
-    Linking.openURL(`mailto:${email}`).catch(e =>
-      error(e, 'No handler for mailto')
-    )
+    Linking.openURL(`mailto:${email}`).catch((e) =>
+      error(e, "No handler for mailto")
+    );
 
-  const linkStyle = [
-    styles[position].link,
-    linkStyleProp?.[position],
-  ]
+  const linkStyle = [styles[position].link, linkStyleProp?.[position]];
   return (
     <View
       style={[
@@ -150,15 +175,38 @@ export function MessageText<TMessage extends IMessage = IMessage> ({
           customTextStyle,
         ]}
         parse={[
-          ...(parsePatterns ? parsePatterns(linkStyle as unknown as TextStyle) : []),
-          { type: 'url', style: linkStyle, onPress: onUrlPress },
-          { type: 'phone', style: linkStyle, onPress: onPhonePress },
-          { type: 'email', style: linkStyle, onPress: onEmailPress },
+          ...(parsePatterns
+            ? parsePatterns(linkStyle as unknown as TextStyle)
+            : []),
+          { type: "url", style: linkStyle, onPress: onUrlPress },
+          { type: "phone", style: linkStyle, onPress: onPhonePress },
+          { type: "email", style: linkStyle, onPress: onEmailPress },
         ]}
         childrenProps={{ ...textProps }}
       >
-        {currentMessage!.text}
+        {questionParser(currentMessage.text)}
       </ParsedText>
     </View>
-  )
+  );
 }
+
+MessageText.propTypes = {
+  position: PropTypes.oneOf(["left", "right"]),
+  optionTitles: PropTypes.arrayOf(PropTypes.string),
+  currentMessage: PropTypes.object,
+  containerStyle: PropTypes.shape({
+    left: StylePropType,
+    right: StylePropType,
+  }),
+  textStyle: PropTypes.shape({
+    left: StylePropType,
+    right: StylePropType,
+  }),
+  linkStyle: PropTypes.shape({
+    left: StylePropType,
+    right: StylePropType,
+  }),
+  parsePatterns: PropTypes.func,
+  textProps: PropTypes.object,
+  customTextStyle: StylePropType,
+};
